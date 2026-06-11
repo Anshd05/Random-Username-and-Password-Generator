@@ -1,0 +1,42 @@
+{
+  "name": "CryptoGen - Secure Credential Generator",
+  "short_name": "CryptoGen",
+  "description": "Cryptographically secure password and username generator with zero-knowledge architecture",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#00ff88",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0e17' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-weight='bold' fill='%2300ff88' text-anchor='middle' dy='.3em'>🔐</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "security"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230a0e17' width='540' height='720'/></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Generate Password",
+      "short_name": "Generate",
+      "description": "Generate a secure random password",
+      "url": "/?action=generate",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%2300ff88' width='96' height='96'/></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

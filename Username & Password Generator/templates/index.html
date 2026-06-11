@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cryptographically secure password and username generator with zero-knowledge architecture">
+    <meta name="theme-color" content="#00ff88">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CryptoGen">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+    <title>🔐 CryptoGen - Secure Credential Generator</title>
+    
+
+    <style>
+        /* ============ CSS VARIABLES & THEME ============ */
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2235;
+            --bg-card-hover: #1e2942;
+            --border-color: #2a3a52;
+            --border-glow: #00ff88;
+            --text-primary: #e8edf5;
+            --text-secondary: #8899aa;
+            --text-muted: #556677;
+            --accent-green: #00ff88;
+            --accent-blue: #00aaff;
+            --accent-purple: #aa44ff;
+            --accent-red: #ff4466;
+            --accent-yellow: #ffaa00;
+            --accent-cyan: #00ffcc;
+            --gradient-1: linear-gradient(135deg, #00ff88, #00aaff);
+            --gradient-2: linear-gradient(135deg, #aa44ff, #ff4466);
+            --gradient-3: linear-gradient(135deg, #00aaff, #aa44ff);
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.15);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ============ RESET & BASE ============ */
+        *, *::before, *::after {
+            margin: 0; padding: 0; box-sizing: border-box;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============ ANIMATED BACKGROUND ============ */
+        .bg-animation {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(0,255,136,0.05) 0%, transparent 70%);
+            top: -100px; right: -100px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .bg-animation::after {
+            content: '';
+            position: absolute;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(0,170,255,0.05) 0%, transparent 70%);
+            bottom: -100px; left: -100px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -50px) scale(1.1); }
+            50% { transform: translate(-50px, 100px) scale(0.9); }
+            75% { transform: translate(-100px, -100px) scale(1.05); }
+        }
+
+        /* ============ MATRIX RAIN CANVAS ============ */
+        #matrixCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.04;
+            pointer-events: none;
+        }
+
+        /* ============ MAIN CONTAINER ============ */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ============ HEADER ============ */
+        .header {
+            text-align: center;
+            padding: 40px 20px 30px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .header .subtitle {
+            font-size: 1.1em;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        .header .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-family: var(--font-mono);
+            border: 1px solid;
+        }
+
+        .badge.python { border-color: #3776ab; color: #5a9fd4; background: rgba(55,118,171,0.1); }
+        .badge.js { border-color: #f7df1e; color: #f7df1e; background: rgba(247,223,30,0.1); }
+        .badge.crypto { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.1); }
+        .badge.aes { border-color: #aa44ff; color: #aa44ff; background: rgba(170,68,255,0.1); }
+
+        /* ============ GRID LAYOUT ============ */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2em; }
+        }
+
+        /* ============ CARD ============ */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            border-color: rgba(0, 255, 136, 0.3);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .card-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+
+        .card-title .icon {
+            font-size: 1.3em;
+        }
+
+        /* ============ FORM ELEMENTS ============ */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.95em;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+        }
+
+        /* Custom checkbox */
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+            font-size: 0.85em;
+        }
+
+        .checkbox-item:hover {
+            border-color: var(--accent-green);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .checkbox-item input[type="checkbox"]:checked {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .checkbox-item input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Slider */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            appearance: none;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+        }
+
+        .slider-value {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--accent-green);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* ============ BUTTONS ============ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font-sans);
+            font-size: 0.95em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4466, #ff6644);
+            color: white;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .generate-btn-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .generate-btn-container .btn {
+            padding: 16px 48px;
+            font-size: 1.1em;
+            border-radius: 16px;
+        }
+
+        /* ============ RESULTS ============ */
+        .result-field {
+            margin-bottom: 16px;
+        }
+
+        .result-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .result-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 1.05em;
+            word-break: break-all;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .result-value:hover {
+            border-color: var(--accent-green);
+        }
+
+        .result-value .text {
+            flex: 1;
+            user-select: all;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .copy-btn.copied {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        /* ============ STRENGTH METER ============ */
+        .strength-meter {
+            margin: 20px 0;
+        }
+
+        .strength-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .strength-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                        background-color 0.5s ease;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .strength-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-mono);
+        }
+
+        .strength-label {
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .strength-score {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        /* ============ STATS GRID ============ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .stat-item:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 1.4em;
+            font-weight: 800;
+            color: var(--accent-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.7em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* ============ CRYPTO DATA DISPLAY ============ */
+        .crypto-section {
+            margin-top: 16px;
+        }
+
+        .crypto-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+            font-family: var(--font-mono);
+            font-size: 0.8em;
+            word-break: break-all;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        .crypto-block .label {
+            color: var(--accent-purple);
+            font-weight: 700;
+        }
+
+        .crypto-block .value {
+            color: var(--text-secondary);
+        }
+
+        .crypto-block .algo {
+            color: var(--accent-yellow);
+        }
+
+        /* ============ TABS ============ */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-green);
+            border-bottom-color: var(--accent-green);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ============ HISTORY TABLE ============ */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 0.8em;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .history-table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(42, 58, 82, 0.3);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ============ TOAST NOTIFICATION ============ */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 14px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-green);
+            border-radius: 12px;
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: var(--transition);
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* ============ LOADING SPINNER ============ */
+        .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid transparent;
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading .spinner { display: inline-block; }
+        .loading .btn-text { display: none; }
+
+        /* ============ CHARACTER CLASS PILLS ============ */
+        .char-classes {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .char-pill {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        .char-pill.active {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .char-pill.inactive {
+            background: rgba(255, 68, 102, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(255, 68, 102, 0.3);
+        }
+
+        /* ============ PENALTIES LIST ============ */
+        .penalties-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .penalties-list li {
+            padding: 6px 0;
+            font-size: 0.85em;
+            color: var(--accent-yellow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .penalties-list li::before {
+            content: '⚠';
+        }
+
+        /* ============ FOOTER ============ */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 0.85em;
+            font-family: var(--font-mono);
+        }
+
+        .footer a {
+            color: var(--accent-green);
+            text-decoration: none;
+        }
+
+        /* ============ ANIMATIONS ============ */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: none; }
+            20% { text-shadow: -2px 0 #ff4466, 2px 0 #00aaff; }
+            40% { text-shadow: 2px 0 #ff4466, -2px 0 #00aaff; }
+            60% { text-shadow: -1px 0 #aa44ff, 1px 0 #00ff88; }
+            80% { text-shadow: 1px 0 #aa44ff, -1px 0 #00ff88; }
+        }
+
+        .glitch-text:hover {
+            animation: glitch 0.3s ease;
+        }
+
+        /* ============ SCROLLBAR ============ */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Matrix Rain Background Canvas -->
+    <canvas id="matrixCanvas"></canvas>
+    <div class="bg-animation"></div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <div class="container">
+        <!-- ====== HEADER ====== -->
+        <header class="header">
+            <h1 class="glitch-text">🔐 CryptoGen</h1>
+            <p class="subtitle">Cryptographically Secure Credential Generator</p>
+            <div class="badges">
+                <span class="badge python"> Python</span>
+                <span class="badge js"> JavaScript</span>
+                <span class="badge crypto"> AES-256-GCM</span>
+                <span class="badge aes"> PBKDF2 / Scrypt</span>
+            </div>
+        </header>
+
+        <!-- ====== CONFIGURATION PANEL ====== -->
+        <div class="grid">
+            <!-- Username Config -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon"></span> Username Configuration
+                </div>
+
+                <div class="form-group">
+                    <label>Style</label>
+                    <select id="usernameStyle">
+                        <option value="mixed"> Random Mix</option>
+                        <option value="adjective_noun"> Adjective + Noun</option>
+                        <option value="hex"> Hexadecimal</option>
+                        <option value="base64"> Base64</option>
+                        <option value="phonetic"> Phonetic</option>
+                        <option value="hacker"> Hacker/L33t</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="includeNumbers" checked>
+                        Include Numbers
+                    </label>
+                </div>
+            </div>
+
+            <!-- Password Config -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon"></span> Password Configuration
+                </div>
+
+                <div class="form-group">
+                    <label>Length: <span id="lengthDisplay" class="slider-value">24</span></label>
+                    <div class="slider-container">
+                        <span style="color: var(--text-muted); font-size: 0.8em;">8</span>
+                        <input type="range" id="passwordLength" min="8" max="128" value="24">
+                        <span style="color: var(--text-muted); font-size: 0.8em;">128</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Strategy</label>
+                    <select id="strategy">
+                        <option value="random"> Pure Random</option>
+                        <option value="passphrase"> Passphrase (Diceware)</option>
+                        <option value="pattern"> Pattern-Based</option>
+                        <option value="hybrid"> Hybrid</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Character Sets</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="useLowercase" checked>
+                            a-z
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="useUppercase" checked>
+                            A-Z
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="useDigits" checked>
+                            0-9
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="useSpecial" checked>
+                            !@#$
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="excludeAmbiguous">
+                            No Ambiguous
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crypto Config -->
+        <div class="grid">
+            <div class="card full-width">
+                <div class="card-title">
+                    <span class="icon"></span> Cryptographic Options
+                </div>
+                <div class="grid" style="gap: 16px;">
+                    <div class="form-group">
+                        <label>Hash Algorithm</label>
+                        <select id="hashAlgorithm">
+                            <option value="sha3_512">SHA3-512 (Recommended)</option>
+                            <option value="sha3_256">SHA3-256</option>
+                            <option value="blake2b">BLAKE2b</option>
+                            <option value="sha512">SHA-512</option>
+                            <option value="sha256">SHA-256</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Batch Count</label>
+                        <input type="number" id="batchCount" value="1" min="1" max="50">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== GENERATE BUTTON ====== -->
+        <div class="generate-btn-container">
+            <button class="btn btn-primary" id="generateBtn" onclick="generateCredentials()">
+                <span class="btn-text"> Generate Secure Credentials</span>
+                <div class="spinner"></div>
+            </button>
+        </div>
+
+        <!-- ====== RESULTS PANEL ====== -->
+        <div id="resultsPanel" style="display: none;">
+            <div class="grid">
+                <!-- Generated Credentials -->
+                <div class="card full-width fade-in">
+                    <div class="card-title">
+                        <span class="icon"></span> Generated Credentials
+                    </div>
+
+                    <div class="result-field">
+                        <div class="result-label">Username</div>
+                        <div class="result-value">
+                            <span class="text" id="resultUsername">—</span>
+                            <button class="copy-btn" onclick="copyToClipboard('resultUsername', this)">📋 Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="result-field">
+                        <div class="result-label">Password</div>
+                        <div class="result-value">
+                            <span class="text" id="resultPassword" style="color: var(--accent-green);">—</span>
+                            <button class="copy-btn" onclick="togglePasswordVisibility()">👁️</button>
+                            <button class="copy-btn" onclick="copyToClipboard('resultPassword', this)">📋 Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strength Analysis -->
+                <div class="card fade-in">
+                    <div class="card-title">
+                        <span class="icon"></span> Strength Analysis
+                    </div>
+
+                    <div class="strength-meter">
+                        <div class="strength-info">
+                            <span class="strength-label" id="strengthLabel">—</span>
+                            <span class="strength-score" id="strengthScore">—</span>
+                        </div>
+                        <div class="strength-bar-bg">
+                            <div class="strength-bar-fill" id="strengthBar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statEntropy">—</div>
+                            <div class="stat-label">Entropy (bits)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statLength">—</div>
+                            <div class="stat-label">Length</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statCrackTime">—</div>
+                            <div class="stat-label">Crack Time</div>
+                        </div>
+                    </div>
+
+                    <div id="charClasses" class="char-classes"></div>
+                    <ul id="penaltiesList" class="penalties-list"></ul>
+                </div>
+
+                <!-- Cryptographic Data -->
+                <div class="card fade-in">
+                    <div class="card-title">
+                        <span class="icon">🔒</span> Cryptographic Data
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="switchTab(event, 'tabHash')">Hash</button>
+                        <button class="tab-btn" onclick="switchTab(event, 'tabEncrypted')">Encrypted</button>
+                        <button class="tab-btn" onclick="switchTab(event, 'tabHMAC')">HMAC</button>
+                    </div>
+
+                    <div id="tabHash" class="tab-content active">
+                        <div class="crypto-block">
+                            <div><span class="label">Algorithm:</span> <span class="algo" id="hashAlgo">—</span></div>
+                            <div><span class="label">Salt:</span> <span class="value" id="hashSalt">—</span></div>
+                            <div><span class="label">Hash:</span> <span class="value" id="hashValue">—</span></div>
+                        </div>
+                    </div>
+
+                    <div id="tabEncrypted" class="tab-content">
+                        <div class="crypto-block">
+                            <div><span class="label">Algorithm:</span> <span class="algo" id="encAlgo">—</span></div>
+                            <div><span class="label">KDF:</span> <span class="algo" id="encKDF">—</span></div>
+                            <div><span class="label">Nonce:</span> <span class="value" id="encNonce">—</span></div>
+                            <div><span class="label">Ciphertext:</span> <span class="value" id="encCiphertext">—</span></div>
+                        </div>
+                    </div>
+
+                    <div id="tabHMAC" class="tab-content">
+                        <div class="crypto-block">
+                            <div><span class="label">Algorithm:</span> <span class="algo" id="hmacAlgo">—</span></div>
+                            <div><span class="label">HMAC:</span> <span class="value" id="hmacValue">—</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== BATCH RESULTS ====== -->
+            <div id="batchPanel" style="display: none;">
+                <div class="card full-width fade-in">
+                    <div class="card-title">
+                        <span class="icon">📋</span> Batch Results
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Username</th>
+                                    <th>Password</th>
+                                    <th>Entropy</th>
+                                    <th>Strength</th>
+                                    <th>Crack Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== HISTORY ====== -->
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-title">
+                <span class="icon"></span> Generation History
+                <button class="btn btn-secondary" style="margin-left: auto; padding: 6px 12px; font-size: 0.8em;"
+                        onclick="clearHistory()">🗑️ Clear</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Username</th>
+                            <th>Entropy</th>
+                            <th>Strength</th>
+                            <th>Strategy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                            No credentials generated yet
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ====== FOOTER ====== -->
+        <footer class="footer">
+            <p>🔐 CryptoGen v1.0 | Python + JavaScript + Cryptography</p>
+            <p style="margin-top: 8px;">
+                AES-256-GCM · PBKDF2 · Scrypt · SHA-3 · BLAKE2 · HMAC · CSPRNG
+            </p>
+            <p style="margin-top: 4px; font-size: 0.8em;">
+                All randomness sourced from OS-level CSPRNG (secrets module)
+            </p>
+        </footer>
+    </div>
+
+    <!-- ================================================ -->
+    <!--        JAVASCRIPT - Frontend Logic               -->
+    <!--        Client-side crypto + API integration       -->
+    <!-- ================================================ -->
+    <script>
+    // ============================================================
+    //     JAVASCRIPT CRYPTOGRAPHIC UTILITIES & FRONTEND ENGINE
+    // ============================================================
+
+    'use strict';
+
+    // ============ MATRIX RAIN ANIMATION (Canvas) ============
+    (function initMatrixRain() {
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFabcdef!@#$%^&*';
+        const charArray = chars.split('');
+        const fontSize = 14;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 14, 23, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#00ff88';
+            ctx.font = `${fontSize}px monospace`;
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = charArray[Math.floor(Math.random() * charArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(draw, 50);
+
+        window.addEventListener('resize', () => {
+            columns = Math.floor(canvas.width / fontSize);
+            drops = Array(columns).fill(1);
+        });
+    })();
+
+    // ============ WEB CRYPTO API UTILITIES (Client-Side) ============
+
+    /**
+     * JavaScript-side cryptographic operations using Web Crypto API.
+     * These complement Python's server-side crypto operations.
+     */
+    class ClientCrypto {
+        /** Web Crypto subtle API requires a secure context (HTTPS or localhost) */
+        static isAvailable() {
+            return window.isSecureContext && !!window.crypto?.subtle;
+        }
+
+        /**
+         * Generate cryptographically random bytes using Web Crypto API
+         */
+        static getRandomBytes(length) {
+            return crypto.getRandomValues(new Uint8Array(length));
+        }
+
+        /**
+         * Generate a random hex string
+         */
+        static randomHex(bytes = 16) {
+            const arr = this.getRandomBytes(bytes);
+            return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        /**
+         * Client-side SHA-256 hash using Web Crypto API
+         */
+        static async sha256(message) {
+            if (!this.isAvailable()) return null;
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        /**
+         * Client-side SHA-512 hash using Web Crypto API
+         */
+        static async sha512(message) {
+            if (!this.isAvailable()) return null;
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-512', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        /**
+         * Client-side AES-GCM encryption using Web Crypto API
+         */
+        static async encryptAESGCM(plaintext, password) {
+            if (!this.isAvailable()) return null;
+            const salt = this.getRandomBytes(16);
+            const iv = this.getRandomBytes(12);
+
+            // Derive key from password using PBKDF2
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                new TextEncoder().encode(password),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey']
+            );
+
+            const key = await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 600000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt']
+            );
+
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                new TextEncoder().encode(plaintext)
+            );
+
+            return {
+                ciphertext: this._arrayBufferToBase64(ciphertext),
+                iv: this._arrayBufferToBase64(iv),
+                salt: this._arrayBufferToBase64(salt),
+                algorithm: 'AES-256-GCM (WebCrypto)',
+            };
+        }
+
+        /**
+         * Generate HMAC-SHA256 using Web Crypto API
+         */
+        static async hmacSHA256(message, keyBytes = null) {
+            if (!this.isAvailable()) return null;
+            if (!keyBytes) {
+                keyBytes = this.getRandomBytes(32);
+            }
+
+            const key = await crypto.subtle.importKey(
+                'raw',
+                keyBytes,
+                { name: 'HMAC', hash: 'SHA-256' },
+                false,
+                ['sign']
+            );
+
+            const sig = await crypto.subtle.sign(
+                'HMAC',
+                key,
+                new TextEncoder().encode(message)
+            );
+
+            return {
+                hmac: this._arrayBufferToBase64(sig),
+                algorithm: 'HMAC-SHA256 (WebCrypto)'
+            };
+        }
+
+        /**
+         * Calculate client-side entropy (Shannon)
+         */
+        static calculateEntropy(text) {
+            if (!text) return 0;
+            const freq = {};
+            for (const ch of text) {
+                freq[ch] = (freq[ch] || 0) + 1;
+            }
+            const len = text.length;
+            let entropy = 0;
+            for (const count of Object.values(freq)) {
+                const p = count / len;
+                if (p > 0) entropy -= p * Math.log2(p);
+            }
+            return entropy;
+        }
+
+        /**
+         * Client-side password strength quick check (JavaScript complement to Python's)
+         */
+        static quickStrengthCheck(password) {
+            let score = 0;
+            const checks = {
+                length8: password.length >= 8,
+                length12: password.length >= 12,
+                length16: password.length >= 16,
+                length24: password.length >= 24,
+                lowercase: /[a-z]/.test(password),
+                uppercase: /[A-Z]/.test(password),
+                digits: /[0-9]/.test(password),
+                special: /[^a-zA-Z0-9]/.test(password),
+                noRepeat: !/(.)\1{2,}/.test(password),
+                noSequential: !/(abc|bcd|cde|def|efg|123|234|345|456|567|678|789)/i.test(password),
+            };
+
+            for (const [key, passed] of Object.entries(checks)) {
+                if (passed) score += 10;
+            }
+
+            return { score: Math.min(score, 100), checks };
+        }
+
+        // Helper: ArrayBuffer to Base64
+        static _arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (const byte of bytes) {
+                binary += String.fromCharCode(byte);
+            }
+            return btoa(binary);
+        }
+    }
+
+    // ============ STATE MANAGEMENT ============
+    const state = {
+        currentPassword: null,
+        passwordVisible: true,
+        history: [],
+        isLoading: false,
+    };
+
+    // ============ UI HELPERS ============
+
+    function showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function copyToClipboard(elementId, btn) {
+        const text = document.getElementById(elementId).textContent;
+        
+        // Use modern Clipboard API with fallback
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    btn.classList.add('copied');
+                    btn.textContent = ' Copied!';
+                    showToast('📋 Copied to clipboard securely');
+                    
+                    // Client-side: immediately hash what was copied (security audit trail)
+                    if (ClientCrypto.isAvailable()) {
+                        ClientCrypto.sha256(text).then(hash => {
+                            if (hash) console.log(`[CryptoGen Audit] Copied content SHA-256: ${hash.substring(0, 16)}...`);
+                        });
+                    }
+
+                    setTimeout(() => {
+                        btn.classList.remove('copied');
+                        btn.textContent = '📋 Copy';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    // Fallback if modern API fails
+                    fallbackCopyToClipboard(text, btn);
+                });
+        } else {
+            // Fallback for older browsers
+            fallbackCopyToClipboard(text, btn);
+        }
+    }
+
+    function fallbackCopyToClipboard(text, btn) {
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            if (success) {
+                btn.classList.add('copied');
+                btn.textContent = '✅ Copied!';
+                showToast('📋 Copied to clipboard');
+                
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = '📋 Copy';
+                }, 2000);
+            } else {
+                showToast('❌ Failed to copy');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            showToast('❌ Failed to copy');
+        }
+    }
+
+    function togglePasswordVisibility() {
+        if (!state.currentPassword) return;
+        state.passwordVisible = !state.passwordVisible;
+        const el = document.getElementById('resultPassword');
+        if (state.passwordVisible) {
+            el.textContent = state.currentPassword;
+        } else {
+            el.textContent = '•'.repeat(state.currentPassword.length);
+        }
+    }
+
+    function switchTab(event, tabId) {
+        // Remove active from all tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        // Activate clicked tab
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // ============ SLIDER UPDATE ============
+    document.getElementById('passwordLength').addEventListener('input', function() {
+        document.getElementById('lengthDisplay').textContent = this.value;
+    });
+
+    // ============ CSRF & SECURITY ============
+    
+    let csrfToken = null;
+    
+    // Read CSRF token embedded by the server (must match Flask session)
+    function initializeCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        csrfToken = meta?.content || null;
+        if (!csrfToken) {
+            console.warn('CSRF token missing — reload the page');
+        }
+    }
+
+    // ============ API HELPERS ============
+    
+    function getApiHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        return headers;
+    }
+
+    async function retrieveCredential(token) {
+        // Retrieve password using one-time retrieval token
+        try {
+            const response = await fetch('/api/retrieve', {
+                method: 'POST',
+                headers: getApiHeaders(),
+                body: JSON.stringify({ token: token }),
+            });
+
+            if (!response.ok) {
+                if (response.status === 429) {
+                    showToast('⏱️ Rate limited. Please wait before trying again.');
+                } else if (response.status === 403) {
+                    showToast('❌ Token expired or already used.');
+                }
+                return null;
+            }
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                return data.credential;
+            }
+            return null;
+        } catch (error) {
+            console.error('Retrieval error:', error);
+            showToast(`❌ Failed to retrieve credential: ${error.message}`);
+            return null;
+        }
+    }
+
+    // ============ MAIN GENERATE FUNCTION ============
+
+    async function generateCredentials() {
+        if (state.isLoading) return;
+
+        const btn = document.getElementById('generateBtn');
+        btn.classList.add('loading');
+        state.isLoading = true;
+
+        const batchCount = parseInt(document.getElementById('batchCount').value) || 1;
+
+        try {
+            // Add client-side request nonce for CSRF-like protection
+            const requestNonce = ClientCrypto.randomHex(16);
+            const requestTimestamp = Date.now();
+
+            // Collect parameters
+            const params = {
+                username_style: document.getElementById('usernameStyle').value,
+                include_numbers: document.getElementById('includeNumbers').checked,
+                password_length: parseInt(document.getElementById('passwordLength').value),
+                use_uppercase: document.getElementById('useUppercase').checked,
+                use_lowercase: document.getElementById('useLowercase').checked,
+                use_digits: document.getElementById('useDigits').checked,
+                use_special: document.getElementById('useSpecial').checked,
+                exclude_ambiguous: document.getElementById('excludeAmbiguous').checked,
+                strategy: document.getElementById('strategy').value,
+                hash_algorithm: document.getElementById('hashAlgorithm').value,
+                batch_count: batchCount,
+                _nonce: requestNonce,
+                _timestamp: requestTimestamp,
+            };
+
+            if (batchCount > 1) {
+                // Batch generation
+                const response = await fetch('/api/batch', {
+                    method: 'POST',
+                    headers: getApiHeaders(),
+                    body: JSON.stringify(params),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    showToast(`❌ Error: ${errorData.message || response.statusText}`);
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayBatchResults(data.credentials);
+                    
+                    // Also display the first one in the main panel with full crypto data
+                    if (data.credentials.length > 0) {
+                        const fullResponse = await fetch('/api/generate', {
+                            method: 'POST',
+                            headers: getApiHeaders(),
+                            body: JSON.stringify(params),
+                        });
+                        const fullData = await fullResponse.json();
+                        if (fullData.status === 'success') {
+                            // Retrieve the actual password using the token
+                            const credential = await retrieveCredential(fullData.retrieval_token);
+                            if (credential) {
+                                // Merge the data
+                                const displayData = {
+                                    ...fullData,
+                                    credentials: {
+                                        username: credential.username,
+                                        password: credential.password,
+                                    },
+                                    cryptographic_data: {
+                                        password_hash: credential.hash,
+                                        encrypted_password: credential.encrypted,
+                                        hmac: credential.hmac
+                                    }
+                                };
+                                displayResults(displayData);
+                            }
+                        }
+                    }
+                    showToast(`⚡ Generated ${data.count} credential sets!`);
+                } else {
+                    showToast(`❌ Error: ${data.message}`);
+                }
+            } else {
+                // Single generation
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: getApiHeaders(),
+                    body: JSON.stringify(params),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    showToast(`❌ Error: ${errorData.message || response.statusText}`);
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // ✅ Retrieve the actual password using the one-time token
+                    const credential = await retrieveCredential(data.retrieval_token);
+                    
+                    if (credential) {
+                        // Merge the response data with retrieved credential
+                        const displayData = {
+                            ...data,
+                            credentials: {
+                                username: credential.username,
+                                password: credential.password,
+                            },
+                            cryptographic_data: {
+                                password_hash: credential.hash,
+                                encrypted_password: credential.encrypted,
+                                hmac: credential.hmac
+                            }
+                        };
+                        displayResults(displayData);
+
+                        // Optional client-side verification (requires secure context)
+                        try {
+                            await performClientSideVerification(displayData);
+                        } catch (verifyErr) {
+                            console.warn('[CryptoGen] Client-side verification skipped:', verifyErr);
+                        }
+
+                        showToast('🔐 Credentials generated with cryptographic security!');
+                    } else {
+                        showToast('❌ Failed to retrieve credentials');
+                    }
+                } else {
+                    showToast(`❌ Error: ${data.message}`);
+                }
+            }
+
+            // Log generation time
+            const elapsed = Date.now() - requestTimestamp;
+            console.log(`[CryptoGen] Generation completed in ${elapsed}ms | Nonce: ${requestNonce}`);
+
+        } catch (error) {
+            console.error('Generation error:', error);
+            showToast(`❌ Connection error: ${error.message}`);
+        } finally {
+            btn.classList.remove('loading');
+            state.isLoading = false;
+        }
+    }
+
+    // ============ CLIENT-SIDE CRYPTO VERIFICATION (JavaScript) ============
+
+    async function performClientSideVerification(data) {
+        /**
+         * This runs IN THE BROWSER using Web Crypto API
+         * to independently verify/complement the Python backend's crypto.
+         */
+        const password = data.credentials.password;
+
+        // Entropy/strength checks work without Web Crypto
+        const clientEntropy = ClientCrypto.calculateEntropy(password);
+        const serverEntropy = data.strength_analysis.shannon_entropy;
+        console.log(`[JS] Client Shannon Entropy: ${clientEntropy.toFixed(2)} | Server: ${serverEntropy}`);
+
+        const quickCheck = ClientCrypto.quickStrengthCheck(password);
+        console.log(`[JS] Quick Strength Score: ${quickCheck.score}/100`);
+
+        if (!ClientCrypto.isAvailable()) {
+            console.warn('[JS WebCrypto] Unavailable (use https://localhost or https://127.0.0.1)');
+            return { clientEntropy, quickCheck };
+        }
+
+        const clientHash = await ClientCrypto.sha256(password);
+        console.log(`[JS WebCrypto] Client SHA-256: ${clientHash.substring(0, 32)}...`);
+
+        const hmacResult = await ClientCrypto.hmacSHA256(password);
+        console.log(`[JS WebCrypto] Client HMAC: ${hmacResult.hmac.substring(0, 32)}...`);
+
+        const testKey = ClientCrypto.randomHex(16);
+        const encrypted = await ClientCrypto.encryptAESGCM(password, testKey);
+        console.log(`[JS WebCrypto] Client AES-GCM encryption verified ✓`);
+
+        return { clientHash, clientEntropy, quickCheck, hmacResult, encrypted };
+    }
+
+    // ============ DISPLAY RESULTS ============
+
+    function displayResults(data) {
+        const panel = document.getElementById('resultsPanel');
+        panel.style.display = 'block';
+
+        const creds = data.credentials;
+        const strength = data.strength_analysis;
+        const cryptoData = data.cryptographic_data;
+
+        // Store current password
+        state.currentPassword = creds.password;
+        state.passwordVisible = true;
+
+        // Credentials
+        document.getElementById('resultUsername').textContent = creds.username;
+        document.getElementById('resultPassword').textContent = creds.password;
+
+        // Strength meter
+        const strengthLabel = document.getElementById('strengthLabel');
+        strengthLabel.textContent = strength.strength;
+        strengthLabel.style.color = strength.color;
+
+        document.getElementById('strengthScore').textContent = 
+            `${strength.score}/100 | ${strength.effective_entropy} bits`;
+
+        const bar = document.getElementById('strengthBar');
+        bar.style.width = `${strength.score}%`;
+        bar.style.backgroundColor = strength.color;
+
+        // Stats
+        document.getElementById('statEntropy').textContent = strength.effective_entropy;
+        document.getElementById('statLength').textContent = strength.length;
+        document.getElementById('statCrackTime').textContent = strength.crack_time;
+        document.getElementById('statCrackTime').style.fontSize = 
+            strength.crack_time.length > 15 ? '0.85em' : '1.4em';
+
+        // Character classes
+        const classesContainer = document.getElementById('charClasses');
+        classesContainer.innerHTML = '';
+        const classLabels = {
+            lowercase: 'a-z', uppercase: 'A-Z', digits: '0-9',
+            special: '!@#$', unicode: 'Unicode'
+        };
+        for (const [key, active] of Object.entries(strength.character_classes)) {
+            const pill = document.createElement('span');
+            pill.className = `char-pill ${active ? 'active' : 'inactive'}`;
+            pill.textContent = `${active ? '✓' : '✗'} ${classLabels[key] || key}`;
+            classesContainer.appendChild(pill);
+        }
+
+        // Penalties
+        const penaltiesList = document.getElementById('penaltiesList');
+        penaltiesList.innerHTML = '';
+        if (strength.penalties.length === 0) {
+            const li = document.createElement('li');
+            li.style.color = 'var(--accent-green)';
+            li.innerHTML = '✅ No weaknesses detected';
+            penaltiesList.appendChild(li);
+        } else {
+            for (const penalty of strength.penalties) {
+                const li = document.createElement('li');
+                li.textContent = penalty;
+                penaltiesList.appendChild(li);
+            }
+        }
+
+        // Hash data
+        document.getElementById('hashAlgo').textContent = cryptoData.password_hash.algorithm;
+        document.getElementById('hashSalt').textContent = cryptoData.password_hash.salt;
+        document.getElementById('hashValue').textContent = cryptoData.password_hash.hash;
+
+        // Encrypted data
+        document.getElementById('encAlgo').textContent = cryptoData.encrypted_password.algorithm;
+        document.getElementById('encKDF').textContent = 
+            `${cryptoData.encrypted_password.kdf} (${cryptoData.encrypted_password.iterations} iterations)`;
+        document.getElementById('encNonce').textContent = cryptoData.encrypted_password.nonce;
+        document.getElementById('encCiphertext').textContent = cryptoData.encrypted_password.ciphertext;
+
+        // HMAC data
+        document.getElementById('hmacAlgo').textContent = cryptoData.hmac.algorithm;
+        document.getElementById('hmacValue').textContent = cryptoData.hmac.hmac;
+
+        // Add to history
+        addToHistory(data);
+
+        // Scroll to results
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function displayBatchResults(credentials) {
+        const panel = document.getElementById('batchPanel');
+        panel.style.display = 'block';
+
+        const tbody = document.getElementById('batchTableBody');
+        tbody.innerHTML = '';
+
+        for (const cred of credentials) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${cred.index}</td>
+                <td style="color: var(--accent-blue);">${cred.username}</td>
+                <td style="color: var(--accent-green); cursor: pointer;" 
+                    title="Click to copy"
+                    onclick="navigator.clipboard.writeText('${cred.password.replace(/'/g, "\\'")}'); 
+                             showToast('📋 Password #${cred.index} copied!')">
+                    ${cred.password.substring(0, 20)}${cred.password.length > 20 ? '...' : ''}
+                </td>
+                <td><span style="color: var(--accent-cyan);">${cred.entropy}</span> bits</td>
+                <td style="color: ${getStrengthColor(cred.strength)};">${cred.strength}</td>
+                <td style="font-size: 0.8em;">${cred.crack_time}</td>
+                <td>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('${cred.username}:${cred.password.replace(/'/g, "\\'")}'); showToast('📋 Copied!')">
+                        📋
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function getStrengthColor(strength) {
+        const colors = {
+            'FORTRESS': '#00ff88',
+            'EXCELLENT': '#00cc66',
+            'VERY STRONG': '#44bb44',
+            'STRONG': '#88aa00',
+            'MODERATE': '#ccaa00',
+            'WEAK': '#ff6600',
+            'CRITICAL': '#ff0000',
+        };
+        return colors[strength] || '#888';
+    }
+
+    // ============ HISTORY MANAGEMENT ============
+
+    function addToHistory(data) {
+        const entry = {
+            time: new Date().toLocaleTimeString(),
+            username: data.credentials.username,
+            entropy: data.strength_analysis.effective_entropy,
+            strength: data.strength_analysis.strength,
+            strategy: data.generation_metadata.password_strategy,
+            color: data.strength_analysis.color,
+        };
+
+        state.history.unshift(entry);
+        if (state.history.length > 20) state.history.pop();
+
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '';
+
+        if (state.history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                No credentials generated yet</td></tr>`;
+            return;
+        }
+
+        for (const entry of state.history) {
+            const tr = document.createElement('tr');
+            tr.className = 'fade-in';
+            tr.innerHTML = `
+                <td style="color: var(--text-muted);">${entry.time}</td>
+                <td style="color: var(--accent-blue);">${entry.username}</td>
+                <td><span style="color: var(--accent-cyan);">${entry.entropy}</span> bits</td>
+                <td style="color: ${entry.color};">${entry.strength}</td>
+                <td style="color: var(--text-muted);">${entry.strategy}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function clearHistory() {
+        state.history = [];
+        renderHistory();
+        showToast('🗑️ History cleared');
+    }
+
+    // ============ KEYBOARD SHORTCUTS ============
+    document.addEventListener('keydown', (e) => {
+        // Ctrl/Cmd + G = Generate
+        if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+            e.preventDefault();
+            generateCredentials();
+        }
+        // Ctrl/Cmd + H = Toggle password visibility
+        if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+            e.preventDefault();
+            togglePasswordVisibility();
+        }
+    });
+
+    // ============ AUTO-CLEAR CLIPBOARD (Security Feature) ============
+
+    /**
+     * Security measure: Clear clipboard after 60 seconds
+     * Prevents password leakage through clipboard history
+     */
+    let clipboardTimeout = null;
+
+    const originalWriteText = navigator.clipboard?.writeText?.bind(navigator.clipboard);
+    if (originalWriteText) {
+        navigator.clipboard.writeText = async function(text) {
+            await originalWriteText(text);
+            
+            if (clipboardTimeout) clearTimeout(clipboardTimeout);
+            clipboardTimeout = setTimeout(async () => {
+                try {
+                    await originalWriteText('');
+                    console.log('[CryptoGen Security] Clipboard auto-cleared after 60s');
+                } catch(e) { /* ignore */ }
+            }, 60000); // 60 seconds
+        };
+    }
+
+    // ============ SECURITY: Clear sensitive data on page unload ============
+    window.addEventListener('beforeunload', () => {
+        state.currentPassword = null;
+        state.history = [];
+        // Attempt to clear clipboard
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText('').catch(() => {});
+        }
+        console.log('[CryptoGen Security] Sensitive data cleared on page unload');
+    });
+
+    // ============ INITIALIZATION ============
+    console.log(`
+    ╔══════════════════════════════════════════════════════════╗
+    ║  🔐 CryptoGen Frontend Initialized                     ║
+    ║  WebCrypto API: ${typeof crypto.subtle !== 'undefined' ? '✅ Available' : '❌ Unavailable'}                          ║
+    ║  CSPRNG: ${typeof crypto.getRandomValues !== 'undefined' ? '✅ Available' : '❌ Unavailable'}                               ║
+    ║  Shortcuts: Ctrl+G (Generate) | Ctrl+H (Toggle)        ║
+    ╚══════════════════════════════════════════════════════════╝
+    `);
+
+    // Initialize CSRF token for API requests
+    initializeCsrfToken();
+
+    // ============ SERVICE WORKER REGISTRATION ============
+    // Enable offline PWA support
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
+                .then(registration => {
+                    console.log('✅ Service Worker registered:', registration);
+                    console.log('🔐 Offline password generation available!');
+                })
+                .catch(error => {
+                    console.warn('⚠️ Service Worker registration failed:', error);
+                });
+        });
+    }
+
+    // Security check — Web Crypto subtle API only works in secure contexts
+    if (!ClientCrypto.isAvailable()) {
+        console.warn('[CryptoGen Security] WebCrypto unavailable. Open via http://localhost:5000 or http://127.0.0.1:5000 (not LAN IP).');
+    }
+    </script>
+</body>
+</html>
