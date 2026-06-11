@@ -7,7 +7,7 @@
 [![Flask](https://img.shields.io/badge/Flask-3.0+-000000?logo=flask)](https://flask.palletsprojects.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?logo=docker)](https://www.docker.com)
-[![Tests](https://img.shields.io/badge/Tests-30%2B-passing-brightgreen)](tests/test_crypto.py)
+
 
 ## ✨ Overview
 
